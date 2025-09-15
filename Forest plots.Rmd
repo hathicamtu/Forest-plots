@@ -1,0 +1,246 @@
+---
+title: "Forest plots"
+author: "Tu"
+date: "2025-09-07"
+output:
+  html_document:
+    toc: true
+    df_print: paged
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+library(forestplot)
+library(forestploter)
+library(grid)
+library(tidyverse)
+library(tibble)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+These are the plots I used to visualize some findings from my master thesis. 
+
+# 1. Using `forestplot()` function
+## 1.1. Plot 1
+Prepare data
+```{r}
+# Create tibble
+forest_data <- tibble(
+  exposure = c(
+    "Full cohort",
+    "  1st trimester",
+    "  2nd trimester",
+    "  Early 3rd trimester",
+    "  Late 3rd trimester",
+    "Subpopulation analyses",
+    "  1st trimester",
+    "  2nd trimester",
+    "  Early 3rd trimester",
+    "  Late 3rd trimester"
+  ),
+  mean  = c(NA, 1.20, 1.31, 1.67, 1.32, NA, 1.11, 1.28, 2.06, 1.48), # point estimates (ORs)
+  lower = c(NA, 0.95, 1.06, 1.17, 1.04, NA, 0.83, 0.99, 1.29, 1.10),
+  upper = c(NA, 1.51, 1.63, 2.38, 1.68, NA, 1.48, 1.66, 3.31, 1.99),
+  aOR_label = c(NA, "1.20 (0.95 – 1.51)", "1.31 (1.06–1.63)", "1.67 (1.17 – 2.38)",
+                "1.32 (1.04 – 1.68)", NA, "1.11 (0.83 – 1.48)", "1.28 (0.99 – 1.66)",
+                "2.06 (1.29 – 3.31)", "1.48 (1.10 – 1.99)"),
+  is_summary = c(TRUE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) # TRUE = summary row (bold), FALSE = normal row
+)
+```
+
+```{r}
+# Create table text with header row
+tabletext <- rbind( #to stack rows together
+  c("Exposure status", " ", "aOR (95% CI)"),  # first row with column titles
+  cbind(
+    forest_data$exposure, " ", forest_data$aOR_label # binds 3 columns
+    )
+)
+```
+So, the forest plot will have 3 columns, the middle column is for plot
+```{r}
+# Horizontal lines
+h_lines <- list(
+  "2" # # draw a line after header row
+  = gpar(lty = 2, # dashed line
+              col = "grey"))
+
+# these below steps to export the forest plot to fit within one-page pdf file
+# Count rows (forest_data_1 + header row)
+n_rows <- nrow(forest_data) + 1  
+
+# Each row is about 0.6 cm tall; convert to inches
+row_height_in <- 0.6 * 0.39  
+
+# Calculate total PDF height with padding
+pdf_height <- n_rows * row_height_in + 1  
+
+# Export forest plot as PDF (1 page only)
+pdf("Figure1.pdf", width = 8, height = pdf_height, onefile = FALSE)
+
+
+# Forest plot 
+forestplot(
+  labeltext = tabletext, 
+  mean  = c(NA, forest_data$mean), # point estimates, add NA for header row
+  lower = c(NA, forest_data$lower), # lower CI, NA for header
+  upper = c(NA, forest_data$upper),
+  is.summary = c(TRUE, forest_data$is_summary), # mark header and subgroup titles bold
+  zero = 1, # null value = 1
+  xlog = TRUE, # plot with log(OR) values
+  xlab = "aOR (95% CI)", # x axis label
+  boxsize = 0.3,
+  lineheight = unit(0.6, "cm"), # verticle spacing between rows
+  xticks = c(0.5, 1, 1.5, 2.0, 3.0), # x axis tick marks
+  clip = c(0.5, 3.0), # clipping area
+  graph.pos = 2, # specify plot in 2nd column
+  graphwidth = unit(50, "mm"), #width of plot column
+  colgap = unit(2, "mm"), # gap between table and plot
+  col = fpColors(box = "#1f77b4", line = "#1f77b4", summary = "black"),
+  txt_gp = fpTxtGp(
+    label = gpar(fontsize = 12),
+    ticks = gpar(fontsize = 13),
+    xlab = gpar(fontsize = 14)
+  ),
+  align = c("l", "c", "c"), # align columns
+  hrzl_lines = h_lines
+)
+dev.off()
+```
+
+## 1.2. Plot 2
+```{r}
+forest_data_1 <- tribble(
+  ~exposure, ~mean, ~lower, ~upper, ~is_summary,
+  "Close-to-delivery exposures", NA, NA, NA, TRUE,   # header
+  "Any antibiotics",             NA, NA, NA, TRUE,   # subgroup
+  "No adjustment for GBS risk factors", 1.70, 1.31, 2.19, FALSE,
+  "Adjusted for GBS risk factors",      1.29, 0.99, 1.67, FALSE,
+  "GBS treatment",              NA, NA, NA, TRUE,   # subgroup
+  "No adjustment for GBS risk factors", 1.76, 1.34, 2.30, FALSE,
+  "Adjusted for GBS risk factors",      1.34, 1.02, 1.76, FALSE,
+  "Penicillins",                NA, NA, NA, TRUE,   # subgroup
+  "No adjustment for GBS risk factors", 1.54, 1.12, 2.13, FALSE,
+  "Adjusted for GBS risk factors",      1.17, 0.84, 1.62, FALSE
+)
+
+
+# ----------------------------
+# Table text for forestplot
+# ----------------------------
+tabletext_1 <- cbind(
+  c("Exposure", forest_data_1$exposure),
+  c("", rep("", nrow(forest_data_1))),
+  c("aOR (95% CI)",
+    "", "",
+    "1.70 (1.31 – 2.19)",
+    "1.29 (0.99 – 1.67)",
+    "",
+    "1.76 (1.34 – 2.30)",
+    "1.34 (1.02 – 1.76)",
+    "",
+    "1.54 (1.12 – 2.13)",
+    "1.17 (0.84 – 1.62)"
+  )
+)
+
+# Count rows (forest_data_1 + header row)
+n_rows <- nrow(forest_data_1) + 1  
+
+# Each row is about 0.6 cm tall; convert to inches
+row_height_in <- 0.6 * 0.39  
+
+# Calculate total PDF height with padding
+pdf_height <- n_rows * row_height_in + 1  
+
+# Export forest plot as PDF (1 page only)
+pdf("forest_plot.pdf", width = 8, height = pdf_height, onefile = FALSE)
+
+# ----------------------------
+# Forest plot
+# ----------------------------
+forestplot(
+  labeltext = tabletext_1,
+  mean  = c(NA, forest_data_1$mean),
+  lower = c(NA, forest_data_1$lower),
+  upper = c(NA, forest_data_1$upper),
+  is.summary = c(TRUE, forest_data_1$is_summary),
+  zero = 1,
+  xlog = TRUE,
+  xlab = "aOR (95% CI)",
+  boxsize = 0.3,
+  lineheight = unit(0.6, "cm"),
+  xticks = c(0.5, 1, 1.5, 2.5),
+  clip = c(0.5, 2.5),
+  graph.pos = 2,
+  graphwidth = unit(50, "mm"),
+  colgap = unit(2, "mm"),
+  col = fpColors(box = "#1f77b4", line = "#1f77b4", summary = "black"),
+  txt_gp = fpTxtGp(
+    label = gpar(fontsize = 11),
+    ticks = gpar(fontsize = 12),
+    xlab = gpar(fontsize = 13)
+  ),
+  align = c("l", "c", "c"),
+  hrzl_lines = h_lines
+)
+dev.off()  
+```
+
+# 2. Using `forest()` function
+Prepare data (Odds ratio scale)
+```{r}
+dt <- tribble(
+  ~`Antibiotic exposure status`,              ~est,  ~low,  ~hi,
+  "Full cohort",           NA,    NA,    NA,
+  "1st trimester",        1.20,  0.95,  1.51,
+  "2nd trimester",        1.31,  1.06,  1.63,
+  "Early 3rd trimester",  1.67,  1.17,  2.38,
+  "Late 3rd trimester",   1.32,  1.04,  1.68,
+  "Subpopulation analyses", NA,   NA,    NA,
+  "1st trimester",        1.11,  0.83,  1.48,
+  "2nd trimester",        1.28,  0.99,  1.66,
+  "Early 3rd trimester",  2.06,  1.29,  3.31,
+  "Late 3rd trimester",   1.48,  1.10,  1.99
+)
+```
+
+```{r}
+# Indent (if they have estimates, i.e. are not main headers)
+dt$`Antibiotic exposure status` <- ifelse(is.na(dt$est),
+                      dt$`Antibiotic exposure status`,
+                      paste0("   ", dt$`Antibiotic exposure status`))
+```
+
+```{r}
+# Add blank column for forestploter plotting area
+dt$` ` <- paste(rep(" ", 20), collapse = " ")
+
+# Add formatted aOR (95% CI) column
+dt$`aOR (95% CI)` <- ifelse(
+  is.na(dt$est), "",
+  sprintf("%.2f (%.2f to %.2f)", dt$est, dt$low, dt$hi)
+)
+
+# Compute SE for
+dt$se <- ifelse(is.na(dt$est), NA, (log(dt$hi) - log(dt$est)) / 1.96)
+
+# Build forest plot
+p_1 <- forest(dt[, c("Antibiotic exposure status", " ", "aOR (95% CI)")],
+            est = dt$est,
+            lower = dt$low,
+            upper = dt$hi,
+            sizes = 0.5,
+            ci_column = 2,
+            ref_line = 1,
+            arrow_lab = c("Antibiotics protective", "Antibiotics harmful"),
+            xlim = c(0.5, 3.0),
+            ticks_at = c(0.5, 1, 1.5, 3)
+)
+
+plot(p_1)
+
+```
+
+
